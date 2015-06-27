@@ -1,5 +1,7 @@
 package c1;
 
+import java.util.HashMap;
+
 import common.Log;
 import common.Wav;
 import f1.Fourier;
@@ -7,69 +9,57 @@ import f1.Fourier;
 
 public class WordRecognition {
 
-	private static String path = "/home/adam/CloudStation/csit/sp/speech/";
+	private static String path = "/home/adam/CloudStation/csit/sp/speech/words/";
 	
 	private static int Fs = 44100;
-	
 	private static String[] words = {
-		"zero1.wav",
-		"zero2.wav",
-		"zero3.wav",
-		"one1.wav",
-		"one2.wav",
-		"one3.wav",
-		"two1.wav",
-		"two2.wav",
-		"two3.wav",
-		"three1.wav",
-		"three2.wav",
-		"three3.wav",
-		"four1.wav",
-		"four2.wav",
-		"four3.wav",
-		"five1.wav",
-		"five2.wav",
-		"five3.wav",
-		"six1.wav",
-		"six2.wav",
-		"six3.wav",
-		"seven1.wav",
-		"seven2.wav",
-		"seven3.wav",
-		"eight1.wav",
-		"eight2.wav",
-		"eight3.wav",
-		"nine1.wav",
-		"nine2.wav",
-		"nine3.wav",
+		"dog1.wav",
+		"dog2.wav",
+		"dog3.wav",
+		"dog.wav",
+		"fast2.wav",
+		"fast3.wav",
+		"horse1.wav",
+		"horse2.wav",
+		"horse3.wav",
+		"horse.wav",
+		"monkey1.wav",
+		"monkey2.wav",
+		"monkey3.wav",
+		"monkey.wav",
 		"parrot1.wav",
 		"parrot2.wav",
 		"parrot3.wav",
-		"horse1.wav",
-		"horse2.wav",
-		"horse3.wav"};	
+		"parrot.wav",
+	};
+	
+	private static HashMap<String, String[]> wordMap = new HashMap<String, String[]>();
+	static {
+		wordMap.put("dog", new String[] {"dog1.wav", "dog2.wav", "dog3.wav", "dog.wav"});
+		wordMap.put("fast", new String[] {"fast2.wav", "fast3.wav"});
+		wordMap.put("horse", new String[] {"horse1.wav", "horse2.wav", "horse3.wav", "horse.wav"});
+		wordMap.put("monkey", new String[] {"monkey1.wav", "monkey2.wav", "monkey3.wav", "monkey.wav"});
+		wordMap.put("parrot", new String[] {"parrot1.wav", "parrot2.wav", "parrot3.wav", "parrot.wav"});
+	}
+	
+	
 	public static void main(String[] args) {
 
+		int k = 30, d = 100, gamma = 2;
 		
-		//int w = 5;
-		
-		for (int w=10; w<12; w++) {
+		for (int w=0; w<words.length; w++) {
 			
 			//Log.i(w + ":");
-			Log.i("");
+			Log.i(words[w] + ":");
 			
-			Wav wave1 = new Wav(path + words[3*w]);
-			Wav wave2 = new Wav(path + words[3*w+1]);
-			Wav wave3 = new Wav(path + words[3*w+2]);
+			Wav wave1 = new Wav(path + words[w]);
+			Wav wave2 = new Wav(path + words[w]);
 	
 			
-			double[][] v1 = vectors(wave1, 25, 100, 2);
-			double[][] v2 = vectors(wave2, 25, 100, 2);
-			double[][] v3 = vectors(wave3, 25, 100, 2);
+			double[][] v1 = vectors(wave1, k, d, gamma);
+			double[][] v2 = vectors(wave2, k, d, gamma);
 			
 			Log.i(DTWdistance(v1, v2));
-			Log.i(DTWdistance(v1, v3));
-			Log.i(DTWdistance(v2, v3));
 		}
 		
 		
