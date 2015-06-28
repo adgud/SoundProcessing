@@ -48,7 +48,7 @@ public class WordRecognition {
 		int k = 30, d = 100, gamma = 2;
 		int selWord = 4;
 		
-		for (int w=words.length-1; w<words.length; w++) {
+		for (int w=0; w<words.length; w++) {
 			
 			//Log.i(w + ":");
 			//Log.i(words[w] + " vs " + words[selWord] + ":");
@@ -56,7 +56,6 @@ public class WordRecognition {
 			Wav wave1 = new Wav(path + words[w]);
 			Wav wave2 = new Wav(path + words[selWord]);
 	
-			
 			double[][] v1 = vectors(wave1, k, d, gamma);
 			double[][] v2 = vectors(wave2, k, d, gamma);
 			
@@ -68,7 +67,6 @@ public class WordRecognition {
 				System.out.println();
 			}
 		}
-		
 		
 	}
 	
@@ -91,21 +89,27 @@ public class WordRecognition {
 
 	public static double S(int k, int d, double[] dft, int Fs) {
 		double sum = 0.0;
-		for (int i=0; i<dft.length/2; i++) { // TODO check
-			sum += dft[i] * H(k, Fs/dft.length * i, d);
-			//Log.e(dft[i] + ", " + H(k, Fs/dft.length * i, d));
+		for (int i=0; i<dft.length; i++) { // TODO check
+			double s = dft[i] * H(k, Fs/dft.length * i, d);
+			sum += s;
+			//Log.e(s);
 		}
 		//Log.e("S sum: " + sum);
-		if (sum == 0) sum = 0.01;
+		//if (sum == 0) sum = 0.00001;
 		return sum;
 	}
 	
 	public static double C(int n, int K, int d, double[] dft, int Fs, double g) {
 		double sum = 0;
-		for (int k=0; k<K-1; k++) {
+		for (int k=0; k<=K-1; k++) {
 			//Log.e("" + Math.pow(Math.log(S(k,d,dft,Fs)), g) * Math.cos(2*Math.PI * ((2*k+1)*n)/(4*K)));
 			//Log.e("" + Math.pow(Math.log(S(k,d,dft,Fs)), g));
-			sum += Math.pow(Math.log(S(k,d,dft,Fs)), g) * Math.cos(Math.toRadians(2*Math.PI * ((2*k+1)*n)/(4*K)));
+			double S = S(k,d,dft,Fs);
+			double Sp = Math.pow(Math.log(S), g);
+			double cos = Math.cos(/*Math.toRadians(*/ 2*Math.PI*(2*k+1)*n/4/K /*)*/);	//2*Math.PI*((2*k+1)*n)/(4*K) ));
+			//sum += Math.pow(Math.log(S(k,d,dft,Fs)), g) * Math.cos(Math.toRadians(2*Math.PI * ((2*k+1)*n)/(4*K)));
+			sum += Sp*cos;
+			//Log.e("S="+S+", Sp="+Sp+", cos="+cos);
 		}
 		//Log.e("C sum: " + sum);
 		return sum;
@@ -113,8 +117,9 @@ public class WordRecognition {
 	
 	public static double[] getCoefficients(int num, int K, int d, double[] dft, int Fs, double g) {
 		double[] coeffs = new double[num];
-		for (int i=0; i<num; i++) {
-			coeffs[i] = C(i, K, d, dft, Fs, g);
+		for (int i=1; i<=num; i++) {
+			coeffs[i-1] = C(i, K, d, dft, Fs, g);
+			//coeffs[i-1] = round(C(i, K, d, dft, Fs, g),2);
 		}
 		return coeffs;
 	}
@@ -148,16 +153,7 @@ public class WordRecognition {
 		}
 		
 		return dtw[stored.length-1][input.length-1];
-	}
-	
-//	public static double min(double a, double b, double c) {
-//		if (a < b && a < c)
-//			return a;
-//		else if (b < a && b < c)
-//			return b;
-//		else 
-//			return c;
-//	}
+	}	
 	
 	public static double min(double... values) {
 		double min = Double.POSITIVE_INFINITY;
@@ -176,11 +172,6 @@ public class WordRecognition {
 		}
 		return max;
 	}
-	
-//	public static int min(int a, int b) {
-//		if (a<b) return a;
-//		else return b;
-//	}
 	
 	public static double round(double value, int places) {
         if (places < 0) {
@@ -203,18 +194,19 @@ public class WordRecognition {
 	}
 	
 	public static double[][] vectors(Wav wave, int k, int d, double g) {
-		wave.removeSilence(0.05);
-		double[][] fragments = wave.split(100);	// milliseconds		
+		//wave.removeSilence(0.05);
+		double[][] fragments = wave.split(15);	// milliseconds		
 		
 		double[][] vectors = new double[fragments.length][12];
 		for (int i=0; i<fragments.length; i++) {
-			for (int j=0; j<12; j++) {
+//			for (int j=0; j<12; j++) {
 				double[] w = Fourier.hanningWindow(fragments[i]);
 				double[] dft = Fourier.magnitudeFFT(w);
-				//dft = Fourier.bandpassFilter(dft, 20, 20000);
-				//Log.e(t.length+"");
-				vectors[i][j] = C(j,k,d,dft,Fs,g);
-			}
+//				//dft = Fourier.bandpassFilter(dft, 20, 20000);
+//				//Log.e(t.length+"");
+//				vectors[i][j] = C(j,k,d,dft,Fs,g);
+//			}
+			vectors[i] = getCoefficients(11, k, d, dft, Fs, g);
 		}
 		
 		return vectors;

@@ -4,7 +4,7 @@ import common.Wav;
 
 public class FourierTest {
 	public static void main(String[] args) {
-		Wav wav = new Wav("/home/adam/CloudStation/csit/sp/artificial/easy/1708Hz2.wav");
+		Wav wav = new Wav("/home/adam/CloudStation/csit/sp/speech/words/horse3.wav");
 		double[] w = Fourier.hanningWindow(wav.wave);
 		double[] dft = Fourier.magnitudeFFT(w);
 		for (double d : dft) {
