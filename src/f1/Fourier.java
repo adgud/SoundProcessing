@@ -15,7 +15,18 @@ public class Fourier {
 		int len = in.length;
 		double[] out = new double[len];		
 		for (int i=0; i<len; i++) {
-			out[i] = in[i] * 0.53836 - 0.46164 * Math.cos( 2 * Math.PI * (i+1) / (len - 1) );
+			out[i] = in[i] * (0.53836 - 0.46164 * Math.cos( 2 * Math.PI * (i+1) / (len - 1) ));
+			//Log.e(out[i]);
+		}		
+		return out;
+	}
+	
+	// applies Hanning window to input array
+	public static double[] hanningWindow(double[] in) {
+		double[] out = new double[in.length];		
+		for (int i=0; i<in.length; i++) {
+			out[i] = in[i] * 0.5 * (1 - Math.cos((2 * Math.PI * i) / (in.length - 1)));
+			//Log.e(out[i]);
 		}		
 		return out;
 	}
@@ -41,7 +52,7 @@ public class Fourier {
 	public static double[] magnitudeFFT(double[] wave) {		
 		int len = wave.length;
 		double[] in = wave.clone();
-		double[] out = new double[len/*/2*/];
+		double[] out = new double[len/2];
 		DoubleFFT_1D dfft = new DoubleFFT_1D(len);
 		dfft.realForward(in);		
 		for (int k=0; k<len/2; k++) {			
@@ -78,7 +89,8 @@ public class Fourier {
 	public static double[] bandpassFilter(double[] dft, int low, int high) {
 		double[] out = dft.clone();
 		for (int i=0; i<out.length; i++) {
-			if (i*44100/dft.length/2 < low || i*44100/dft.length/2 > high)
+			//if (i*44100/dft.length/2 < low || i*44100/dft.length/2 > high)
+			if (i*44100/dft.length < low || i*44100/dft.length > high)
 				out[i] = 0.0;
 		}
 		return out;
