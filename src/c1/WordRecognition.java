@@ -48,7 +48,7 @@ public class WordRecognition {
 		int k = 30, d = 100, gamma = 2;
 		int selWord = 4;
 		
-		for (int w=0; w<words.length; w++) {
+		for (int w=17; w<words.length; w++) {
 			
 			//Log.i(w + ":");
 			//Log.i(words[w] + " vs " + words[selWord] + ":");
@@ -60,12 +60,14 @@ public class WordRecognition {
 			double[][] v2 = vectors(wave2, k, d, gamma);
 			
 			Log.i(words[w] + " vs " + words[selWord] + ": " + DTWdistance(v1, v2));
-			for (double[] dd : v1) {
-				for (double ddd : dd) {
-					System.out.print(ddd + " ");
-				}
-				System.out.println();
-			}
+			
+			// print coeffs
+//			for (double[] dd : v1) {
+//				for (double ddd : dd) {
+//					System.out.print(ddd + " ");
+//				}
+//				System.out.println();
+//			}
 		}
 		
 	}
@@ -124,8 +126,8 @@ public class WordRecognition {
 		return coeffs;
 	}
 	
-	public static double DTWdistance(double[][] stored, double[][] input) {
-		double[][] dtw = new double[stored.length][input.length];
+	public static double DTWdistance(double[][] mfcc1, double[][] mfcc2) {
+		double[][] dtw = new double[mfcc1.length][mfcc2.length];
 		
 //		for (int i=1; i<stored.length; i++) {
 //			dtw[i][0] = Double.POSITIVE_INFINITY;
@@ -134,25 +136,40 @@ public class WordRecognition {
 //			dtw[0][i] = Double.POSITIVE_INFINITY;
 //		}
 		
-		int w = stored.length/1;
+		int w = mfcc2.length/3;
 		
-		for (int i=0; i<stored.length; i++) {
-			for (int j=0; j<input.length; j++) {
+		for (int i=0; i<mfcc1.length; i++) {
+			for (int j=0; j<mfcc2.length; j++) {
 				dtw[i][j] = Double.POSITIVE_INFINITY;
 			}
 		}
 		
 		dtw[0][0] = 0;
+		double gmax = 0.0;
 		
-		for (int i=1; i<stored.length; i++) {
-			//for (int j=1; j<input.length; j++) {
-			for (int j=max(1, i-w); j<min(input.length, i+w); j++) {
-				double cost = dist(stored[i], input[j]);
-				dtw[i][j] = cost + min(dtw[i-1][j], dtw[i][j-1], dtw[i-1][j-1]);
+		for (int i=1; i<mfcc1.length; i++) {
+			for (int j=1; j<mfcc2.length; j++) {
+			//for (int j=max(1, i-w); j<min(mfcc2.length, i+w); j++) {
+				
+				if ( Math.abs(mfcc2.length/2 - j) > w ) {	// not within the band
+					dtw[i][j] = Double.POSITIVE_INFINITY;
+				} else {	// within the band				
+					double cost = dist(mfcc1[i], mfcc2[j]);
+					dtw[i][j] = cost + min(dtw[i-1][j], dtw[i][j-1], dtw[i-1][j-1]);
+					
+					if (dtw[i][j] > gmax) gmax = dtw[i][j];
+				}
 			}
 		}
 		
-		return dtw[stored.length-1][input.length-1];
+		for (double[] dd : dtw) {
+			for (double ddd : dd) {
+				System.out.print(ddd + " ");
+			}
+			System.out.println();
+		}
+		
+		return dtw[mfcc1.length-1][mfcc2.length-1];
 	}	
 	
 	public static double min(double... values) {
@@ -206,7 +223,7 @@ public class WordRecognition {
 //				//Log.e(t.length+"");
 //				vectors[i][j] = C(j,k,d,dft,Fs,g);
 //			}
-			vectors[i] = getCoefficients(11, k, d, dft, Fs, g);
+			vectors[i] = getCoefficients(12, k, d, dft, Fs, g);
 		}
 		
 		return vectors;
