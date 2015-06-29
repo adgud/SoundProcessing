@@ -46,9 +46,11 @@ public class WordRecognition {
 	public static void main(String[] args) {
 
 		int k = 30, d = 100, gamma = 2;
-		int selWord = 4;
+		int millis = 20;
+		int selWord = 7;
+		double band = 1.0;
 		
-		for (int w=17; w<words.length; w++) {
+		for (int w=0; w<words.length; w++) {
 			
 			//Log.i(w + ":");
 			//Log.i(words[w] + " vs " + words[selWord] + ":");
@@ -56,18 +58,37 @@ public class WordRecognition {
 			Wav wave1 = new Wav(path + words[w]);
 			Wav wave2 = new Wav(path + words[selWord]);
 	
-			double[][] v1 = vectors(wave1, k, d, gamma);
-			double[][] v2 = vectors(wave2, k, d, gamma);
+			double[][] mfcc1 = getMFCCs(wave1, k, d, gamma, millis);
+			double[][] mfcc2 = getMFCCs(wave2, k, d, gamma, millis);
 			
-			Log.i(words[w] + " vs " + words[selWord] + ": " + DTWdistance(v1, v2));
+			double[][] dtw = createDTWmatrix(mfcc2, mfcc1);
 			
-			// print coeffs
-//			for (double[] dd : v1) {
+//			for (double[] dd : dtw) {
 //				for (double ddd : dd) {
 //					System.out.print(ddd + " ");
 //				}
-//				System.out.println();
+//				System.out.println(";");
 //			}
+			
+			double dist = dtw[dtw.length-2][dtw[0].length-2];
+			
+			//Log.i(words[w] + " vs " + words[selWord] + ": " + dist);// + createDTWmatrix(v1, v2));
+			//Log.e(dist);
+			
+			Log.e(words[w] + " vs " + words[selWord] + ": ");
+			double[][] path = findBestPath(dtw, band);
+			for (double[] dd : path) {
+				System.out.print("|");
+				for (double ddd : dd) {
+					if (ddd != 0.0)
+						System.out.print("x");//ddd);
+					else
+						System.out.print(" ");
+					//System.out.print(ddd + " ");
+				}
+				System.out.println("|");
+			}
+			
 		}
 		
 	}
@@ -126,7 +147,7 @@ public class WordRecognition {
 		return coeffs;
 	}
 	
-	public static double DTWdistance(double[][] mfcc1, double[][] mfcc2) {
+	public static double[][] createDTWmatrix(double[][] mfcc1, double[][] mfcc2) {
 		double[][] dtw = new double[mfcc1.length][mfcc2.length];
 		
 //		for (int i=1; i<stored.length; i++) {
@@ -136,7 +157,7 @@ public class WordRecognition {
 //			dtw[0][i] = Double.POSITIVE_INFINITY;
 //		}
 		
-		int w = mfcc2.length/3;
+		//int r = 2;//mfcc1.length/6;
 		
 		for (int i=0; i<mfcc1.length; i++) {
 			for (int j=0; j<mfcc2.length; j++) {
@@ -151,26 +172,62 @@ public class WordRecognition {
 			for (int j=1; j<mfcc2.length; j++) {
 			//for (int j=max(1, i-w); j<min(mfcc2.length, i+w); j++) {
 				
-				if ( Math.abs(mfcc2.length/2 - j) > w ) {	// not within the band
-					dtw[i][j] = Double.POSITIVE_INFINITY;
-				} else {	// within the band				
+				//if ( j-r > i && i > j+r ) {//Math.abs(mfcc2.length/2 - j) > r ) {	// not within the band
+				//	dtw[i][j] = Double.POSITIVE_INFINITY;
+				//} else {	// within the band				
 					double cost = dist(mfcc1[i], mfcc2[j]);
 					dtw[i][j] = cost + min(dtw[i-1][j], dtw[i][j-1], dtw[i-1][j-1]);
 					
 					if (dtw[i][j] > gmax) gmax = dtw[i][j];
-				}
+					
+					// for readability
+					dtw[i][j] = round(dtw[i][j],2);
+				//}
 			}
 		}
 		
-		for (double[] dd : dtw) {
-			for (double ddd : dd) {
-				System.out.print(ddd + " ");
-			}
-			System.out.println();
-		}
-		
-		return dtw[mfcc1.length-1][mfcc2.length-1];
+		return dtw;
 	}	
+	
+	public static double[][] findBestPath(double[][] dtw, double bandCoeff) {
+		double[][] path = new double[dtw.length][dtw[0].length];
+		
+		for (double[] d : path) {
+			for (double dd : d) {
+				dd = 0.0;
+			}
+		}
+		int M = dtw.length, N = dtw[0].length;
+		int m = dtw.length-2, n=dtw[0].length-2;
+		
+		int w = (int) (dtw.length * bandCoeff);
+		
+		double pathCost = 0.0;
+		
+		while (m != 0 && n != 0) {
+			//double currentCost = dtw[m][n];
+			path[m][n] = m*100 + n;
+			
+			pathCost += dtw[m][n];
+			
+			double leftCost = dtw[m][n-1];
+			double upCost = dtw[m-1][n];
+			double diagCost = dtw[m-1][n-1];
+			double bestCost = min(leftCost, upCost, diagCost);
+			if (bestCost == leftCost && Math.abs(n - N/2) < w && n > 0) {
+				n--;
+			} else if (
+				bestCost == upCost && Math.abs(m - M/2) < w && m > 0) {
+				m--;
+			} else {
+				m--;
+				n--;
+			}
+		}
+		
+		Log.e("path cost: " + round(pathCost,1));
+		return path;
+	}
 	
 	public static double min(double... values) {
 		double min = Double.POSITIVE_INFINITY;
@@ -190,29 +247,28 @@ public class WordRecognition {
 		return max;
 	}
 	
-	public static double round(double value, int places) {
-        if (places < 0) {
+	public static double round(double value, int precision) {
+        if (precision < 0) {
             throw new IllegalArgumentException();
         }
 
-        long factor = (long) Math.pow(10, places);
+        long factor = (long) Math.pow(10, precision);
         value = value * factor;
         long tmp = Math.round(value);
         return (double) tmp / factor;
     }
 	
-	
 	public static double dist(double[] a, double[] b) {
 		double sum = 0.0;
 		for (int i=0; i<a.length; i++) {
-			sum += Math.pow(Math.abs(a[i]-b[i]), 2);
+			sum += Math.pow(a[i]-b[i], 2);
 		}
 		return Math.sqrt(sum);
 	}
 	
-	public static double[][] vectors(Wav wave, int k, int d, double g) {
+	public static double[][] getMFCCs(Wav wave, int k, int d, double g, int millis) {
 		//wave.removeSilence(0.05);
-		double[][] fragments = wave.split(15);	// milliseconds		
+		double[][] fragments = wave.split(millis);	// milliseconds		
 		
 		double[][] vectors = new double[fragments.length][12];
 		for (int i=0; i<fragments.length; i++) {
