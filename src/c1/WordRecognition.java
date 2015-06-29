@@ -1,9 +1,14 @@
 package c1;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 
 import common.Log;
 import common.Wav;
+
 import f1.Fourier;
 //import g2.generators.SigGen;
 
@@ -12,30 +17,6 @@ public class WordRecognition {
 	private static String path = "/home/adam/CloudStation/csit/sp/speech/words/";
 	
 	private static int Fs = 44100;
-	private static String[] words = {
-		"dog1.wav",
-		"dog2.wav",
-		"dog3.wav",
-		"horse1.wav",
-		"horse2.wav",
-		"horse3.wav",
-		"monkey1.wav",
-		"monkey2.wav",
-		"monkey3.wav",
-		"parrot1.wav",
-		"parrot2.wav",
-		"parrot3.wav",
-	};
-	
-	private static HashMap<String, String[]> wordMap = new HashMap<String, String[]>();
-	static {
-		wordMap.put("dog", new String[] {"dog1.wav", "dog2.wav", "dog3.wav", "dog.wav"});
-		wordMap.put("fast", new String[] {"fast2.wav", "fast3.wav"});
-		wordMap.put("horse", new String[] {"horse1.wav", "horse2.wav", "horse3.wav", "horse.wav"});
-		wordMap.put("monkey", new String[] {"monkey1.wav", "monkey2.wav", "monkey3.wav", "monkey.wav"});
-		wordMap.put("parrot", new String[] {"parrot1.wav", "parrot2.wav", "parrot3.wav", "parrot.wav"});
-	}
-	
 	
 	public static void main(String[] args) {
 
@@ -43,46 +24,9 @@ public class WordRecognition {
 		double gamma = 2;
 		int millis = 25;
 		double band = 0.4;	// 0.0 - 1.0
-		
-		Wav inputWav = new Wav(path + "dog.wav");
-		double[][] mfccInput = getMFCCs(inputWav, k, d, gamma, millis);
-		
-		for (int w=0; w<words.length; w++) {
-						
-			Wav testedWav = new Wav(path + words[w]);			
-	
-			double[][] mfccTested = getMFCCs(testedWav, k, d, gamma, millis);			
-			
-			double[][] dtw = createDTWmatrix(mfccTested, mfccInput);
-			
-//			for (double[] dd : dtw) {
-//				for (double ddd : dd) {
-//					System.out.print(ddd + " ");
-//				}
-//				System.out.println(";");
-//			}
-			
-			double dist = dtw[dtw.length-2][dtw[0].length-2];
-			
-			//Log.i(words[w] + " vs " + words[selWord] + ": " + dist);// + createDTWmatrix(v1, v2));
-			//Log.e(dist);
-			
-			//Log.e(words[w] + " ");
-			double[][] path = findBestPath(dtw, band);
-			
-//			for (double[] dd : path) {
-//				System.out.print("|");
-//				for (double ddd : dd) {
-//					if (ddd != 0.0)
-//						System.out.print("x");//ddd);
-//					else
-//						System.out.print(" ");
-//					//System.out.print(ddd + " ");
-//				}
-//				System.out.println("|");
-//			}
-			
-		}
+				
+		String r = performComparison(path+"monkey.wav", path, k, d, gamma, millis, band);
+		Log.i(r);
 		
 	}
 	
@@ -195,13 +139,13 @@ public class WordRecognition {
 		
 		int w = (int) (N * bandCoeff);
 		
-		double pathCost = 0.0;
+		//double pathCost = 0.0;
 		
 		while (m != 0 && n != 0) {
 			//double currentCost = dtw[m][n];
-			path[m][n] = m*100 + n;
+			path[m][n] = 1.0;
 			
-			pathCost += dtw[m][n];
+			//pathCost += dtw[m][n];
 			
 			double leftCost = dtw[m][n-1];
 			double upCost = dtw[m-1][n];
@@ -216,11 +160,22 @@ public class WordRecognition {
 				m--;
 				n--;
 			}
-		}
-		
-		Log.e(round(pathCost/(M+N),0));
+		}		
+		//Log.e(round(pathCost/(M+N),0));
 		return path;
 	}
+	
+	public static double calculateCost(double[][] dtw, double[][] path) {
+		double cost = 0.0;
+		for (int i=0; i<dtw.length; i++) {
+			for (int j=0; j<dtw[0].length; j++) {
+				if (path[i][j] != 0.0)
+					cost += dtw[i][j];
+			}
+		}
+		return cost/(dtw.length + dtw[0].length);
+	}
+	
 	
 	public static double min(double... values) {
 		double min = Double.POSITIVE_INFINITY;
@@ -277,4 +232,73 @@ public class WordRecognition {
 		
 		return vectors;
 	}
+
+	public static String[] getFilenames(String path) {
+		File folder = new File(path);
+        File[] files = folder.listFiles();
+        String[] filenames = new String[files.length];
+        for (int i=0; i<filenames.length; i++) {
+        	filenames[i] = files[i].getPath();
+        }
+        return filenames;
+	}
+
+	public static String performComparison(String filename, String samplesPath) {
+		
+		// use default values
+		int k = 30, d = 100;
+		double gamma = 2;
+		int millis = 25;
+		double band = 0.4;	// 0.0 - 1.0
+		
+		return performComparison(filename, samplesPath, k, d, gamma, millis, band);
+	}
+	
+	public static String performComparison(String filename, String samplesPath, int k, int d, double gamma, int millis, double band) {
+		
+		class Result {
+			public String name;
+			public double cost;
+			public Result(String n, double c) {
+				this.name = n;
+				this.cost = c;
+			}
+		}
+		
+		ArrayList<Result> results = new ArrayList<Result>();
+		
+		String result = "";
+		
+		Wav inputWav = new Wav(filename);
+		double[][] mfccInput = getMFCCs(inputWav, k, d, gamma, millis);
+		
+		for (String sample : getFilenames(samplesPath)) {
+						
+			Wav testedWav = new Wav(sample);			
+	
+			double[][] mfccSample = getMFCCs(testedWav, k, d, gamma, millis);			
+			double[][] dtw = createDTWmatrix(mfccSample, mfccInput);
+			//double dist = dtw[dtw.length-2][dtw[0].length-2];
+			double[][] path = findBestPath(dtw, band);
+			double cost = round(calculateCost(dtw, path),2);
+			String name = sample.substring(sample.lastIndexOf("/")+1,sample.length());
+			results.add(new Result(name, cost));
+		}
+		
+		Collections.sort(results, new Comparator<Result>() {
+			@Override
+			public int compare(Result r1, Result r2) {
+				return (int) (r1.cost - r2.cost);
+			}
+			
+		});
+		
+		for (Result r : results) {
+			result += r.cost + "\t" + r.name + "\n";
+		}
+		
+		return result;
+	}
+	
+	
 }
