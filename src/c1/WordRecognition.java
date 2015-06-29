@@ -16,21 +16,15 @@ public class WordRecognition {
 		"dog1.wav",
 		"dog2.wav",
 		"dog3.wav",
-		"dog.wav",
-		"fast2.wav",
-		"fast3.wav",
 		"horse1.wav",
 		"horse2.wav",
 		"horse3.wav",
-		"horse.wav",
 		"monkey1.wav",
 		"monkey2.wav",
 		"monkey3.wav",
-		"monkey.wav",
 		"parrot1.wav",
 		"parrot2.wav",
 		"parrot3.wav",
-		"parrot.wav",
 	};
 	
 	private static HashMap<String, String[]> wordMap = new HashMap<String, String[]>();
@@ -45,23 +39,21 @@ public class WordRecognition {
 	
 	public static void main(String[] args) {
 
-		int k = 30, d = 100, gamma = 2;
-		int millis = 20;
-		int selWord = 7;
-		double band = 1.0;
+		int k = 30, d = 100;
+		double gamma = 2;
+		int millis = 25;
+		double band = 0.4;	// 0.0 - 1.0
+		
+		Wav inputWav = new Wav(path + "dog.wav");
+		double[][] mfccInput = getMFCCs(inputWav, k, d, gamma, millis);
 		
 		for (int w=0; w<words.length; w++) {
-			
-			//Log.i(w + ":");
-			//Log.i(words[w] + " vs " + words[selWord] + ":");
-			
-			Wav wave1 = new Wav(path + words[w]);
-			Wav wave2 = new Wav(path + words[selWord]);
+						
+			Wav testedWav = new Wav(path + words[w]);			
 	
-			double[][] mfcc1 = getMFCCs(wave1, k, d, gamma, millis);
-			double[][] mfcc2 = getMFCCs(wave2, k, d, gamma, millis);
+			double[][] mfccTested = getMFCCs(testedWav, k, d, gamma, millis);			
 			
-			double[][] dtw = createDTWmatrix(mfcc2, mfcc1);
+			double[][] dtw = createDTWmatrix(mfccTested, mfccInput);
 			
 //			for (double[] dd : dtw) {
 //				for (double ddd : dd) {
@@ -75,19 +67,20 @@ public class WordRecognition {
 			//Log.i(words[w] + " vs " + words[selWord] + ": " + dist);// + createDTWmatrix(v1, v2));
 			//Log.e(dist);
 			
-			Log.e(words[w] + " vs " + words[selWord] + ": ");
+			//Log.e(words[w] + " ");
 			double[][] path = findBestPath(dtw, band);
-			for (double[] dd : path) {
-				System.out.print("|");
-				for (double ddd : dd) {
-					if (ddd != 0.0)
-						System.out.print("x");//ddd);
-					else
-						System.out.print(" ");
-					//System.out.print(ddd + " ");
-				}
-				System.out.println("|");
-			}
+			
+//			for (double[] dd : path) {
+//				System.out.print("|");
+//				for (double ddd : dd) {
+//					if (ddd != 0.0)
+//						System.out.print("x");//ddd);
+//					else
+//						System.out.print(" ");
+//					//System.out.print(ddd + " ");
+//				}
+//				System.out.println("|");
+//			}
 			
 		}
 		
@@ -200,7 +193,7 @@ public class WordRecognition {
 		int M = dtw.length, N = dtw[0].length;
 		int m = dtw.length-2, n=dtw[0].length-2;
 		
-		int w = (int) (dtw.length * bandCoeff);
+		int w = (int) (N * bandCoeff);
 		
 		double pathCost = 0.0;
 		
@@ -225,7 +218,7 @@ public class WordRecognition {
 			}
 		}
 		
-		Log.e("path cost: " + round(pathCost,1));
+		Log.e(round(pathCost/(M+N),0));
 		return path;
 	}
 	
