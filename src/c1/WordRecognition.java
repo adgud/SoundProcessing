@@ -23,17 +23,19 @@ public class WordRecognition {
 		int k = 30, d = 100;
 		double gamma = 2;
 		int millis = 25;
-		double band = 0.4;	// 0.0 - 1.0
+		double band = 1.0;	// 0.0 - 1.0
 				
-		String r = performComparison(path+"monkey.wav", path, k, d, gamma, millis, band);
+		String r = performComparison(path+"parrot.wav", path, k, d, gamma, millis, band);
 		Log.i(r);
 		
 	}
 	
+	// equation (3)
 	public static double mi(double m) {
 		return 700 * (Math.pow(10, (m/2595.0)) - 1);
 	}
 	
+	// equation (1)
 	public static double H(int k, double f, int d) {
 		double c = mi(k*d);
 		double l = mi((k-1)*d);
@@ -46,40 +48,34 @@ public class WordRecognition {
 			return 0.0;
 		}
 	}
-
+	
+	// equation (4)
 	public static double S(int k, int d, double[] dft, int Fs) {
 		double sum = 0.0;
-		for (int i=0; i<dft.length; i++) { // TODO check
+		for (int i=0; i<dft.length; i++) {
 			double s = dft[i] * H(k, Fs/dft.length * i, d);
 			sum += s;
-			//Log.e(s);
 		}
-		//Log.e("S sum: " + sum);
-		//if (sum == 0) sum = 0.00001;
 		return sum;
 	}
 	
+	//  equation (5)
 	public static double C(int n, int K, int d, double[] dft, int Fs, double g) {
 		double sum = 0;
 		for (int k=0; k<=K-1; k++) {
-			//Log.e("" + Math.pow(Math.log(S(k,d,dft,Fs)), g) * Math.cos(2*Math.PI * ((2*k+1)*n)/(4*K)));
-			//Log.e("" + Math.pow(Math.log(S(k,d,dft,Fs)), g));
 			double S = S(k,d,dft,Fs);
-			double Sp = Math.pow(Math.log(S), g);
-			double cos = Math.cos(/*Math.toRadians(*/ 2*Math.PI*(2*k+1)*n/4/K /*)*/);	//2*Math.PI*((2*k+1)*n)/(4*K) ));
-			//sum += Math.pow(Math.log(S(k,d,dft,Fs)), g) * Math.cos(Math.toRadians(2*Math.PI * ((2*k+1)*n)/(4*K)));
+			double Sp = Math.pow(Math.log(S), g);	// equation (6)
+			double cos = Math.cos( 2*Math.PI*(2*k+1)*n/4/K );
 			sum += Sp*cos;
-			//Log.e("S="+S+", Sp="+Sp+", cos="+cos);
 		}
-		//Log.e("C sum: " + sum);
 		return sum;
 	}
 	
+	// calculcate set of MFCC coefficients for given dft window
 	public static double[] getCoefficients(int num, int K, int d, double[] dft, int Fs, double g) {
 		double[] coeffs = new double[num];
 		for (int i=1; i<=num; i++) {
 			coeffs[i-1] = C(i, K, d, dft, Fs, g);
-			//coeffs[i-1] = round(C(i, K, d, dft, Fs, g),2);
 		}
 		return coeffs;
 	}
@@ -93,8 +89,6 @@ public class WordRecognition {
 //		for (int i=1; i<input.length; i++) {
 //			dtw[0][i] = Double.POSITIVE_INFINITY;
 //		}
-		
-		//int r = 2;//mfcc1.length/6;
 		
 		for (int i=0; i<mfcc1.length; i++) {
 			for (int j=0; j<mfcc2.length; j++) {
@@ -139,13 +133,8 @@ public class WordRecognition {
 		
 		int w = (int) (N * bandCoeff);
 		
-		//double pathCost = 0.0;
-		
 		while (m != 0 && n != 0) {
-			//double currentCost = dtw[m][n];
 			path[m][n] = 1.0;
-			
-			//pathCost += dtw[m][n];
 			
 			double leftCost = dtw[m][n-1];
 			double upCost = dtw[m-1][n];
@@ -214,22 +203,15 @@ public class WordRecognition {
 		return Math.sqrt(sum);
 	}
 	
+	// returns array of MFCC coefficients for each fragment of the input wave
 	public static double[][] getMFCCs(Wav wave, int k, int d, double g, int millis) {
-		//wave.removeSilence(0.05);
-		double[][] fragments = wave.split(millis);	// milliseconds		
-		
+		double[][] fragments = wave.split(millis);	// split wave into fragments of x milliseconds				
 		double[][] vectors = new double[fragments.length][12];
 		for (int i=0; i<fragments.length; i++) {
-//			for (int j=0; j<12; j++) {
-				double[] w = Fourier.hanningWindow(fragments[i]);
-				double[] dft = Fourier.magnitudeFFT(w);
-//				//dft = Fourier.bandpassFilter(dft, 20, 20000);
-//				//Log.e(t.length+"");
-//				vectors[i][j] = C(j,k,d,dft,Fs,g);
-//			}
+			double[] w = Fourier.hanningWindow(fragments[i]);
+			double[] dft = Fourier.magnitudeFFT(w);
 			vectors[i] = getCoefficients(12, k, d, dft, Fs, g);
-		}
-		
+		}		
 		return vectors;
 	}
 
@@ -283,6 +265,9 @@ public class WordRecognition {
 			double cost = round(calculateCost(dtw, path),2);
 			String name = sample.substring(sample.lastIndexOf("/")+1,sample.length());
 			results.add(new Result(name, cost));
+			
+			System.err.println(name + " path:");
+			printPath(path);
 		}
 		
 		Collections.sort(results, new Comparator<Result>() {
@@ -300,5 +285,16 @@ public class WordRecognition {
 		return result;
 	}
 	
-	
+	public static void printPath(double[][] path) {
+		for (double d[] : path) {
+			System.out.print("|");
+			for (double dd : d) {
+				if (dd != 0.0)
+					System.out.print("x");
+				else
+					System.out.print(" ");
+			}
+			System.out.println("|");
+		}
+	}
 }
