@@ -4,13 +4,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 
 import common.Log;
 import common.Wav;
 
 import f1.Fourier;
-//import g2.generators.SigGen;
 
 public class WordRecognition {
 
@@ -124,8 +122,8 @@ public class WordRecognition {
 		double[][] path = new double[dtw.length][dtw[0].length];
 		
 		for (double[] d : path) {
-			for (double dd : d) {
-				dd = 0.0;
+			for (int i = 0; i < d.length; i++) {
+				d[i] = 0.0;
 			}
 		}
 		int M = dtw.length, N = dtw[0].length;
