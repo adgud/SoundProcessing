@@ -12,7 +12,7 @@ import f1.Fourier;
 
 public class WordRecognition {
 
-	private static String path = "/home/adam/CloudStation/csit/sp/speech/words/";
+	private static String path = "/home/adam/CloudStation/csit/sp/speech/words/soft/";
 	
 	private static int Fs = 44100;
 	
@@ -23,9 +23,16 @@ public class WordRecognition {
 		int millis = 25;
 		double band = 1.0;	// 0.0 - 1.0
 				
-		String r = performComparison(path+"parrot.wav", path, k, d, gamma, millis, band);
+		String r = performComparison(path+"soft.wav", path, k, d, gamma, millis, band);
 		Log.i(r);
-		
+//		Wav testedWav = new Wav(path+"soft.wav");			
+//		double[][] mfccSample = getMFCCs(testedWav, k, d, gamma, millis);	
+//		for (double[] ddd : mfccSample) {
+//			for (double dd : ddd) {
+//				System.out.print(dd + ";");
+//			}
+//			System.out.println("");
+//		}
 	}
 	
 	// equation (3)
